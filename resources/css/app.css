@@ -1,0 +1,45 @@
+body {
+    font-family: 'Arial', sans-serif;
+}
+
+#sidebar-wrapper {
+    width: 250px;
+}
+
+#page-content-wrapper {
+    flex: 1;
+    padding: 20px;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: none;
+}
+
+.card-body {
+    padding: 30px;
+}
+
+.btn-primary,
+.btn-success {
+    border-radius: 20px;
+}
+
+.list-group-item {
+    border: none;
+    border-radius: 0;
+    padding: 10px 20px;
+}
+
+.list-group-item:hover {
+    background-color: #f1f1f1;
+}
+
+.form-control {
+    border-radius: 10px;
+}
