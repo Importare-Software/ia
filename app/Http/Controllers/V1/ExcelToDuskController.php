@@ -19,14 +19,20 @@ class ExcelToDuskController extends Controller
     public function uploadExcel(Request $request)
     {
         $request->validate(['excel' => 'required|file|mimes:xlsx,xls']);
-        $path = $request->file('excel')->store('temp'); // Guarda temporalmente el archivo
-        $spreadsheet = IOFactory::load(storage_path('app/' . $path));
-        $sheetNames = $spreadsheet->getSheetNames(); // Obtiene los nombres de todas las pestañas
 
-        // Guarda la ruta del archivo en la sesión
-        session(['excelPath' => $path]);
+        try {
+            $path = $request->file('excel')->store('temp'); // Guarda temporalmente el archivo
+            $spreadsheet = IOFactory::load(storage_path('app/' . $path));
+            $sheetNames = $spreadsheet->getSheetNames(); // Obtiene los nombres de todas las pestañas
 
-        return redirect()->back()->with('sheets', $sheetNames); // Devuelve la vista anterior con los nombres de las pestañas
+            // Guarda la ruta del archivo en la sesión
+            session(['excelPath' => $path]);
+
+            return redirect()->back()->with('sheets', $sheetNames); // Devuelve la vista anterior con los nombres de las pestañas
+        } catch (\Exception $e) {
+            Log::error("Error al leer el archivo Excel: " . $e->getMessage());
+            return back()->withErrors(['msg' => 'Error al leer el archivo Excel: ' . $e->getMessage()]);
+        }
     }
 
     public function generateDusk(Request $request)
