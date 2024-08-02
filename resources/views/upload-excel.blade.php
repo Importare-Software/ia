@@ -14,7 +14,7 @@
                         <form id="upload-form" action="{{ route('uploadExcel') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="mb-3">
-                                <label for="excel" class="form-label">Sube tu archivo Excel:</label>
+                                <label for="excel" class="form-label">Sube tu archivo Excel (Solo permite .xlsx):</label>
                                 <input type="file" class="form-control" id="excel" name="excel" required>
                                 <button type="submit" class="btn btn-primary mt-3">Cargar Excel</button>
                             </div>

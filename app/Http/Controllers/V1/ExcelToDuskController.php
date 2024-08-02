@@ -57,14 +57,16 @@ class ExcelToDuskController extends Controller
 
         Log::info("Loaded Excel file from path: $path");
 
+        // Obtener localizadores de la celda 3B
+        $locators = $sheet->getCell('B3')->getValue();
+
         foreach ($rowsToProcess as $row) {
             $scenarioID = $sheet->getCell('A' . $row)->getValue();
             $condition = $sheet->getCell('B' . $row)->getValue();
             $useCase = $sheet->getCell('C' . $row)->getValue();
             $executionDetail = $sheet->getCell('D' . $row)->getValue();
             $expectedResults = $sheet->getCell('E' . $row)->getValue();
-            $locators = $sheet->getCell('F' . $row)->getValue();
-            $inputData = $sheet->getCell('G' . $row)->getValue();
+            $inputData = $sheet->getCell('F' . $row)->getValue();
 
             // Log the extracted data
             Log::info("Row $row data: ScenarioID: $scenarioID, Condition: $condition, UseCase: $useCase, ExecutionDetail: $executionDetail, ExpectedResults: $expectedResults, Locators: $locators, InputData: $inputData");
@@ -134,6 +136,11 @@ class ExcelToDuskController extends Controller
                                     [
                                         "step" => 7,
                                         "instruction" => "Take a screenshot to capture the current state of the application for evidence."
+
+                                    ],
+                                    [
+                                        "step" => 8,
+                                        "instruction" => "Every press() must be followed by a hash, example: press('#btnLogin') and after a press, there must be a 3 second pause."
 
                                     ]
                                 ]

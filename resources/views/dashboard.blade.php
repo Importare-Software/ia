@@ -42,6 +42,31 @@
                 </div>
             </div>
         </div>
+
+        <!-- Cargar datos al chat -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="fas fa-upload fa-3x mb-3"></i> <!-- Icono FontAwesome -->
+                    <h5 class="card-title">Cargar Datos al Chat</h5>
+                    <p class="card-text">Carga datos utilizando un archivo markdown.</p>
+                    <a href="{{ route('upload.data') }}" class="btn btn-success">Acceder</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chatbot -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <i class="fas fa-comments fa-3x mb-3"></i> <!-- Icono FontAwesome -->
+                    <h5 class="card-title">ImporChat</h5>
+                    <p class="card-text">Interactúa con el chatbot para obtener respuestas.</p>
+                    <a href="{{ route('chat.index') }}" class="btn btn-success">Acceder</a>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 @endsection

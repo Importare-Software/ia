@@ -1,5 +1,5 @@
 <div class="d-flex flex-column flex-shrink-0 p-3 bg-light" style="width: 250px;">
-    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-dark text-decoration-none">
+    <a href="/dashboard" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-dark text-decoration-none">
         <span class="fs-4">Opciones</span>
     </a>
     <hr>
@@ -28,6 +28,25 @@
             <a href="{{ url('/test_results') }}" class="nav-link {{ request()->is('test_results') ? 'active' : 'link-dark' }}">
                 Calificar y Corregir
             </a>
+        </li>
+        <li>
+            <a href="{{ url('/upload-data') }}" class="nav-link {{ request()->is('upload-data') ? 'active' : 'link-dark' }}">
+                Cargar data (Chat)
+            </a>
+        </li>
+        <li>
+            <a href="{{ url('/chat') }}" class="nav-link {{ request()->is('chat') ? 'active' : 'link-dark' }}">
+                ImporChat
+            </a>
+        </li>
+        <br><br><br><br>
+        <li>
+            <a href="{{ route('logout') }}" class="nav-link link-dark" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                Cerrar Sesión
+            </a>
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                @csrf
+            </form>
         </li>
     </ul>
 </div>
