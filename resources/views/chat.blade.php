@@ -18,10 +18,12 @@
                         <ul id="chatMessages" class="list-unstyled"></ul>
                     </div>
                     <div class="card-footer">
-                        <div class="input-group">
-                            <input type="text" id="chatInput" class="form-control" placeholder="Escribe tu mensaje...">
-                            <button class="btn btn-primary" onclick="sendMessage()">Enviar</button>
-                        </div>
+                        <form id="chatForm" onsubmit="sendMessage(); return false;">
+                            <div class="input-group">
+                                <input type="text" id="chatInput" class="form-control" placeholder="Escribe tu mensaje...">
+                                <button type="submit" class="btn btn-primary" style="margin-left: 5px">Enviar</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -68,6 +70,7 @@
         messageElement.classList.add('chat-message', isUser ? 'user-message' : 'bot-message');
         messageElement.textContent = message;
         chatMessages.appendChild(messageElement);
+        messageElement.scrollIntoView({ behavior: 'smooth' });
     }
 
     function loadMessages() {
