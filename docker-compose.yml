@@ -1,0 +1,21 @@
+services:
+    app:
+        container_name: ia-app
+        build:
+            context: .
+            dockerfile: Dockerfile
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        expose:
+            - 80
+        entrypoint: ["sh", "-c", "/var/www/startup.sh > /proc/1/fd/1 2>/proc/1/fd/2"]
+
+    nginx:
+        container_name: ia-nginx
+        image: nginx:alpine
+        ports:
+            - "8011:80"
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx/:/etc/nginx/conf.d/
