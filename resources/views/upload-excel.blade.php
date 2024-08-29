@@ -11,7 +11,6 @@
                         <h1>Carga y selecciona una pestaña de Excel</h1>
                     </div>
                     <div class="card-body">
-                        <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
                         <form id="upload-form" action="{{ route('uploadExcel') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="mb-3">
