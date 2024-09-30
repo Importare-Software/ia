@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Document;
 use Illuminate\Http\Request;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
@@ -11,12 +10,29 @@ use Parsedown;
 
 class DocumentController extends Controller
 {
+    protected $supabase;
+    protected $embeddingModel;
+
+    public function __construct()
+    {
+        $this->supabase = new Client([
+            'base_uri' => env('SUPABASE_URL'),
+            'headers'  => [
+                'apikey'        => env('SUPABASE_KEY'),
+                'Authorization' => 'Bearer ' . env('SUPABASE_KEY'),
+                'Content-Type'  => 'application/json'
+            ]
+        ]);
+
+        $this->embeddingModel = 'text-embedding-3-small'; // Modelo de embeddings recomendado
+    }
+
     public function upload(Request $request)
     {
         Log::info('Iniciando el proceso de carga del documento');
 
         $request->validate([
-            'document' => 'required'
+            'document' => 'required|file'
         ]);
         Log::info('Archivo validado correctamente');
 
@@ -33,23 +49,27 @@ class DocumentController extends Controller
             }
 
             foreach ($contentSections as $section) {
-                Log::info('Procesando sección', ['content' => $section['content'], 'tags' => $section['tags']]);
-                $tags = $section['tags'];
-                $tagsVector = $this->vectorizeContent(implode(" ", $tags));
-                $contentVector = $this->vectorizeContent($section['content']);
+                Log::info('Procesando sección', ['title' => $section['title']]);
 
-                $document = new Document();
-                $document->section = json_encode($section['tags']);;
-                $document->content = json_encode($section['content']);
-                $document->vector = json_encode($contentVector);
-                $document->tags = json_encode($tagsVector);
+                // Generar embedding combinado del título y contenido
+                $embedding = $this->vectorizeContent($section['title'] . ' ' . $section['content']);
 
-                if (!$document->save()) {
-                    Log::error('Error al guardar el documento en la base de datos');
-                    throw new \Exception("Error al guardar el documento en la base de datos");
-                }
+                // Preparar metadatos (etiquetas)
+                $metadata = [
+                    'tags' => $section['tags']
+                ];
 
-                Log::info('Sección procesada y guardada', ['tags' => $tags]);
+                // Guardar en Supabase
+                $response = $this->supabase->request('POST', 'rest/v1/documents', [
+                    'json' => [
+                        'title'     => $section['title'],
+                        'content'   => $section['content'],
+                        'embedding' => $embedding,
+                        'metadata'  => $metadata
+                    ]
+                ]);
+
+                Log::info('Sección procesada y guardada', ['title' => $section['title']]);
             }
 
             Log::info('Documento guardado en la base de datos con secciones etiquetadas y vectorizadas');
@@ -62,28 +82,50 @@ class DocumentController extends Controller
 
     private function parseContentIntoSections($markdownContent)
     {
-        $parsedown = new Parsedown();
-        $content = $parsedown->text($markdownContent);
-        // Dividir contenido utilizando el tag <h2> como punto de inicio para cada sección
-        $sections = preg_split('/(?=<h2>)/', $content, -1, PREG_SPLIT_NO_EMPTY);
-        $taggedSections = [];
+        $lines = preg_split('/\r\n|\r|\n/', $markdownContent);
+        $sections = [];
+        $currentTitle = '';
+        $currentContent = '';
 
-        foreach ($sections as $section) {
-            // Buscar la primera aparición de </h2> para separar el título del contenido
-            $endOfTitlePos = strpos($section, '</h2>');
-            $titleWithH2 = substr($section, 0, $endOfTitlePos + 5); // +5 para incluir </h2>
-            $title = strip_tags($titleWithH2); // Remover tags HTML para obtener solo el texto del título
-            $sectionContent = trim(substr($section, $endOfTitlePos + 5)); // +5 para comenzar después del </h2>
+        foreach ($lines as $line) {
+            if (preg_match('/^##\s*(.+)$/', $line, $matches)) {
+                // Si hay un título actual, guardamos la sección anterior
+                if ($currentTitle && $currentContent) {
+                    $sections[] = [
+                        'title'   => trim($currentTitle),
+                        'tags'    => $this->extractTags($currentTitle),
+                        'content' => trim($currentContent)
+                    ];
+                }
+                // Iniciamos una nueva sección
+                $currentTitle = $matches[1];
+                $currentContent = '';
+            } else {
+                // Acumulamos el contenido
+                $currentContent .= $line . "\n";
+            }
+        }
 
-            $taggedSections[] = [
-                'content' => $sectionContent,
-                'tags' => [trim($title)]
+        // Agregar la última sección
+        if ($currentTitle && $currentContent) {
+            $sections[] = [
+                'title'   => trim($currentTitle),
+                'tags'    => $this->extractTags($currentTitle),
+                'content' => trim($currentContent)
             ];
         }
 
-        return $taggedSections;
+        return $sections;
     }
 
+    private function extractTags($title)
+    {
+        // Dividir el título por '|' y obtener las etiquetas
+        $tags = explode('|', $title);
+        // Limpiar las etiquetas
+        $tags = array_map('trim', $tags);
+        return $tags;
+    }
 
     private function vectorizeContent($content)
     {
@@ -93,11 +135,11 @@ class DocumentController extends Controller
         $response = $client->post('https://api.openai.com/v1/embeddings', [
             'headers' => [
                 'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-                'Content-Type' => 'application/json',
+                'Content-Type'  => 'application/json',
             ],
             'json' => [
                 'input' => $content,
-                'model' => 'text-embedding-3-large',
+                'model' => $this->embeddingModel,
             ],
         ]);
 
