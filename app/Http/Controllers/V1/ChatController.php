@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatbotSetting;
 use App\Models\Conversation;
 use Illuminate\Http\Request;
 use GuzzleHttp\Client;
@@ -29,43 +30,24 @@ class ChatController extends Controller
             ]
         ]);
 
+        $settings = ChatbotSetting::first();
+
         // Configuraciones por defecto, puedes cambiarlas según tus necesidades
-        $this->assistantName       = 'Ed';
-        $this->instructions        = 'Eres un asistente virtual diseñado para proporcionar información y soporte a los clientes de una empresa. Tu misión es responder consultas, resolver problemas y proporcionar información precisa relacionada con los productos y servicios de la empresa, utilizando únicamente la información proporcionada en el contexto. Actúas con una personalidad profesional y empática; eres amable y eficiente en cada interacción.
-
-Objetivo Principal
-Proporcionar un soporte excepcional, resolviendo las solicitudes de los clientes de manera eficiente y satisfactoria.
-
-Directrices
-Contexto Limitado: Usa solo la información proporcionada en el contexto para responder. No añadas información adicional ni inventes respuestas.
-Continuidad en la Conversación: Mantén una conversación fluida y coherente, recordando el historial de interacción con el cliente. Evita saludar como si fuera la primera vez en cada respuesta dentro de una misma conversación.
-Claridad y Precisión: Proporciona respuestas claras y concisas. Evita el uso de jerga técnica que pueda ser incomprensible para el cliente.
-Empatía y Profesionalismo: Mantén un tono profesional y respetuoso. Muestra empatía y comprensión hacia las necesidades del cliente.
-Manejo de Información Desconocida: Si no encuentras la información solicitada en el contexto, informa al cliente de manera amable y sugiere alternativas si es posible.
-Estilo de Respuesta
-Inicio de Conversación:
-Al comenzar una nueva conversación, saluda al cliente de manera cordial.
-Durante la Conversación:
-Evita repetir saludos en cada respuesta.
-Confirma que has entendido la solicitud o pregunta del cliente.
-Contenido de la Respuesta:
-Proporciona la información o solución solicitada de manera estructurada y fácil de entender.
-Si es apropiado, ofrece recursos o información adicional que sea relevante y esté disponible en el contexto.
-Cierre de la Interacción:
-Pregunta si el cliente necesita ayuda adicional.
-Finaliza de manera amable, invitando al cliente a volver a contactar si lo necesita.
-Formato de Entrega
-Lenguaje Claro: Utiliza un lenguaje sencillo y directo.
-Personalización: Dirígete al cliente de manera respetuosa, usando su nombre si lo ha proporcionado.
-Profesionalismo: Mantén siempre un tono profesional y cortés.';
+        $this->assistantName       = $settings->assistantName;
+        $this->instructions        = $settings->instructions;
         $this->embeddingModel      = 'text-embedding-3-small';
-        $this->chatModel           = 'gpt-4o-mini';
-        $this->similarityThreshold = 0.5;
+        $this->chatModel           = $settings->chatModel;
+        $this->similarityThreshold = $settings->similarityThreshold;
     }
 
     public function index()
     {
-        return view('chat');
+        $sessionId = session()->getId();
+        $conversations = Conversation::where('session_id', $sessionId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return view('chat', ['conversations' => $conversations]);
     }
 
     public function sendMessage(Request $request)
@@ -75,12 +57,14 @@ Profesionalismo: Mantén siempre un tono profesional y cortés.';
         $incognito    = $request->input('incognito', false);
         $name         = $request->input('name', $this->assistantName);
         $instructions = $request->input('instructions', $this->instructions);
+        $user         = auth()->user();
 
         // Parsear el mensaje usando Parsedown
         $message = Parsedown::instance()->text($message);
 
         if (!$incognito) {
             Conversation::create([
+                'user_id'    => $user->id,
                 'session_id' => $sessionId,
                 'message'    => $message,
                 'is_user'    => true,
@@ -91,6 +75,7 @@ Profesionalismo: Mantén siempre un tono profesional y cortés.';
 
         if (!$incognito) {
             Conversation::create([
+                'user_id'    => $user->id,
                 'session_id' => $sessionId,
                 'message'    => $responseMessage,
                 'is_user'    => false,
@@ -173,6 +158,7 @@ Profesionalismo: Mantén siempre un tono profesional y cortés.';
 
     private function findAnswerInVectors($message)
     {
+        $user = auth()->user();
         $messageVector = $this->vectorizeMessage($message);
         if (is_null($messageVector)) {
             Log::error('Vectorización fallida para el mensaje: ' . $message);
@@ -182,6 +168,7 @@ Profesionalismo: Mantén siempre un tono profesional y cortés.';
         // Realizar la búsqueda vectorial en Supabase
         $response = $this->supabase->request('POST', '/rest/v1/rpc/match_documents', [
             'json' => [
+                'user_id'               => $user->id,
                 'query_embedding'       => $messageVector,
                 'match_count'           => 10,
                 'similarity_threshold'  => $this->similarityThreshold - 0.1,
@@ -239,7 +226,7 @@ Profesionalismo: Mantén siempre un tono profesional y cortés.';
 
     public function getMessages(Request $request)
     {
-        $sessionId = $request->input('session_id', session()->getId());
+        $sessionId = session()->getId();
         $incognito = $request->input('incognito', false);
 
         if ($incognito) {

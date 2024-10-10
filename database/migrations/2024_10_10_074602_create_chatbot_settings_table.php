@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('conversations', function (Blueprint $table) {
+        Schema::create('chatbot_settings', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->index();
-            $table->string('session_id')->index();
-            $table->text('message');
-            $table->boolean('is_user');
-            $table->foreign('user_id')->references('id')->on('users');
+            $table->string('assistantName')->default('Ed');
+            $table->text('instructions');
+            $table->string('chatModel')->default('gpt-4o-mini');
+            $table->float('similarityThreshold')->default(0.5);
             $table->timestamps();
         });
     }
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('conversations');
+        Schema::dropIfExists('chatbot_settings');
     }
 };

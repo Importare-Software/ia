@@ -15,7 +15,13 @@
                         </div>
                     </div>
                     <div class="card-body chat-container">
-                        <ul id="chatMessages" class="list-unstyled"></ul>
+                        <ul id="chatMessages" class="list-unstyled">
+                            @foreach($conversations as $conversation)
+                            <li class="{{ $conversation->is_user ? 'user-message' : 'bot-message' }}">
+                                {!! $conversation->message !!}
+                            </li>
+                            @endforeach
+                        </ul>
                     </div>
                     <div class="card-footer">
                         <form id="chatForm" onsubmit="sendMessage(); return false;">
@@ -68,26 +74,25 @@
         const chatMessages = document.getElementById('chatMessages');
         const messageElement = document.createElement('li');
         messageElement.classList.add('chat-message', isUser ? 'user-message' : 'bot-message');
-        messageElement.textContent = message;
+        messageElement.innerHTML = message;
         chatMessages.appendChild(messageElement);
-        messageElement.scrollIntoView({ behavior: 'smooth' });
+        messageElement.scrollIntoView({
+            behavior: 'smooth'
+        });
     }
 
     function loadMessages() {
-        const session_id = '{{ session()->getId() }}';
 
-        fetch('{{ route('chat.getMessages') }}', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        session_id: session_id,
-                        incognito: incognito
-                    })
-                })
+        fetch(`{{ route('chat.getMessages') }}`, { 
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
             .then(response => response.json())
             .then(data => {
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
                 data.forEach(msg => {
                     appendMessage(msg.message, msg.is_user);
                 });

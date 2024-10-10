@@ -29,6 +29,13 @@
                 Calificar y Corregir
             </a>
         </li>
+        @if(auth()->check() && auth()->user()->email === 'alexis@importare.mx')
+        <li>
+            <a href="{{ url('/chatbot/settings') }}" class="nav-link {{ request()->is('chatbot/settings') ? 'active' : 'link-dark' }}">
+                Configurar Chat
+            </a>
+        </li>
+        @endif
         <li>
             <a href="{{ url('/upload-data') }}" class="nav-link {{ request()->is('upload-data') ? 'active' : 'link-dark' }}">
                 Cargar data (Chat)

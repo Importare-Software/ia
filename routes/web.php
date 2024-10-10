@@ -38,12 +38,16 @@ Route::group(['middleware' => 'auth'], function () {
     Route::put('/test_results/{id}', [App\Http\Controllers\V1\TestResultController::class, 'update'])->name('test_results.update');
 
     Route::post('/documents/upload', [App\Http\Controllers\V1\DocumentController::class, 'upload'])->name('documents.upload');
-    Route::get('/upload-data', function () {
-        return view('upload-data');
-    })->name('upload.data');
+
+    Route::get('/upload-data', [App\Http\Controllers\V1\DocumentController::class, 'showUploadForm'])->name('upload.data');
+    Route::delete('/documents/delete', [App\Http\Controllers\V1\DocumentController::class, 'delete'])->name('documents.delete');
     Route::get('/chat', [App\Http\Controllers\V1\ChatController::class, 'index'])->name('chat.index');
     Route::post('/chat/send-message', [App\Http\Controllers\V1\ChatController::class, 'sendMessage'])->name('chat.sendMessage');
     Route::get('/chat/get-messages', [App\Http\Controllers\V1\ChatController::class, 'getMessages'])->name('chat.getMessages');
+
+    Route::get('/chatbot/settings', [App\Http\Controllers\V1\ChatbotSettingsController::class, 'edit'])->name('chatbot.settings.edit');
+    Route::put('/chatbot/settings', [App\Http\Controllers\V1\ChatbotSettingsController::class, 'update'])->name('chatbot.settings.update');
+
 
     Route::get('/dashboard', function () {
         return view('dashboard');

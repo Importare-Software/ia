@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Document;
 use Illuminate\Http\Request;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +28,14 @@ class DocumentController extends Controller
         $this->embeddingModel = 'text-embedding-3-small'; // Modelo de embeddings recomendado
     }
 
+    public function showUploadForm()
+    {
+        $user = auth()->user();
+        $hasDocument = Document::where('user_id', $user->id)->exists();
+
+        return view('upload-data', ['hasDocument' => $hasDocument]);
+    }
+
     public function upload(Request $request)
     {
         Log::info('Iniciando el proceso de carga del documento');
@@ -37,6 +46,7 @@ class DocumentController extends Controller
         Log::info('Archivo validado correctamente');
 
         try {
+            $user = auth()->user();
             $filename = $request->document->getClientOriginalName();
             Log::info('Archivo recibido', ['filename' => $filename]);
 
@@ -47,6 +57,8 @@ class DocumentController extends Controller
                 Log::error('No se encontraron secciones para procesar');
                 throw new \Exception("No se encontraron secciones para procesar.");
             }
+
+            $documentGroupId = (string) \Illuminate\Support\Str::uuid();
 
             foreach ($contentSections as $section) {
                 Log::info('Procesando sección', ['title' => $section['title']]);
@@ -65,7 +77,9 @@ class DocumentController extends Controller
                         'title'     => $section['title'],
                         'content'   => $section['content'],
                         'embedding' => $embedding,
-                        'metadata'  => $metadata
+                        'metadata'  => $metadata,
+                        'user_id'   => $user->id,
+                        'document_group_id' => $documentGroupId
                     ]
                 ]);
 
@@ -150,6 +164,25 @@ class DocumentController extends Controller
         } else {
             Log::error('Error en la vectorización', ['response' => $response->getBody()]);
             return null;
+        }
+    }
+
+    public function delete()
+    {
+        try {
+            $user = auth()->user();
+
+            $document = Document::where('user_id', $user->id)->first();
+
+            if (!$document) {
+                return redirect()->back()->with('error', 'No se encontró ningún documento asociado al usuario para eliminar.');
+            }
+
+            Document::where('document_group_id', $document->document_group_id)->delete();
+
+            return redirect()->back()->with('success', 'Todos los fragmentos del documento han sido eliminados correctamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error al eliminar el documento: ' . $e->getMessage());
         }
     }
 }

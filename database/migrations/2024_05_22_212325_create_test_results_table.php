@@ -24,6 +24,9 @@ return new class extends Migration
             $table->longText('ai_response');
             $table->integer('ai_response_score')->nullable();
             $table->longText('ai_response_corrected')->nullable();
+            $table->unsignedBigInteger('user_id')->index();
+            $table->string('project_name')->nullable();
+            $table->foreign('user_id')->references('id')->on('users');
             $table->timestamps();
         });
     }
