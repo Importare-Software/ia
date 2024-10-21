@@ -68,9 +68,8 @@ class ExcelToDuskController extends Controller
             $executionDetail    = $sheet->getCell('D' . $row)->getValue();
             $expectedResults    = $sheet->getCell('E' . $row)->getValue();
             $inputData          = $sheet->getCell('F' . $row)->getValue();
-            $outputData         = $sheet->getCell('G' . $row)->getValue(); // Si existe la columna de Datos de salida
+            $outputData         = $sheet->getCell('G' . $row)->getValue(); 
 
-            // Log the extracted data
             Log::info("Row $row data: ScenarioID: $scenarioID, Condition: $condition, UseCase: $useCase, ExecutionDetail: $executionDetail, ExpectedResults: $expectedResults, Locators: $locators, InputData: $inputData, OutputData: $outputData");
 
             $prompts[] = [
@@ -103,7 +102,6 @@ class ExcelToDuskController extends Controller
         foreach ($prompts as $prompt) {
             $aiResponse = null;
 
-            // Construir mensajes para el modelo GPT
             $messages = [
                 [
                     "role"    => "system",
@@ -167,7 +165,6 @@ class ExcelToDuskController extends Controller
                 ]
             ];
 
-            // Realizar la llamada a la API de OpenAI
             try {
                 $response = $client->post('v1/chat/completions', [
                     'json' => [
@@ -186,7 +183,6 @@ class ExcelToDuskController extends Controller
                 $aiResponse = 'No response due to API error';
             }
 
-            // Guardar el resultado en test_results
             TestResult::create([
                 'scenario_id'       => $prompt['scenarioID'],
                 'condition'         => $prompt['condition'],
