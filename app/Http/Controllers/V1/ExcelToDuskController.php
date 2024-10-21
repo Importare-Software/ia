@@ -39,10 +39,9 @@ class ExcelToDuskController extends Controller
     public function generateDusk(Request $request)
     {
         $request->validate([
-            'sheetName' => 'required|string',
-            'rows' => 'required|string',
-            'project_name' => 'required|string',
-            'use_feedback' => 'nullable|boolean',
+            'sheetName'     => 'required|string',
+            'rows'          => 'required|string',
+            'project_name'  => 'required|string',
         ]);
 
         $path = session('excelPath'); // Recupera la ruta del archivo de la sesión
@@ -51,11 +50,11 @@ class ExcelToDuskController extends Controller
             return back()->with('error', 'No se ha cargado ningún archivo Excel.');
         }
 
-        $rowsInput = $request->input('rows');
-        $rowsToProcess = $this->parseRowsInput($rowsInput);
-        $spreadsheet = IOFactory::load(storage_path('app/' . $path));
-        $sheet = $spreadsheet->getSheetByName($request->sheetName);
-        $prompts = [];
+        $rowsInput      = $request->input('rows');
+        $rowsToProcess  = $this->parseRowsInput($rowsInput);
+        $spreadsheet    = IOFactory::load(storage_path('app/' . $path));
+        $sheet          = $spreadsheet->getSheetByName($request->sheetName);
+        $prompts        = [];
 
         Log::info("Loaded Excel file from path: $path");
 
@@ -63,24 +62,26 @@ class ExcelToDuskController extends Controller
         $locators = $sheet->getCell('B3')->getValue();
 
         foreach ($rowsToProcess as $row) {
-            $scenarioID = $sheet->getCell('A' . $row)->getValue();
-            $condition = $sheet->getCell('B' . $row)->getValue();
-            $useCase = $sheet->getCell('C' . $row)->getValue();
-            $executionDetail = $sheet->getCell('D' . $row)->getValue();
-            $expectedResults = $sheet->getCell('E' . $row)->getValue();
-            $inputData = $sheet->getCell('F' . $row)->getValue();
+            $scenarioID         = $sheet->getCell('A' . $row)->getValue();
+            $condition          = $sheet->getCell('B' . $row)->getValue();
+            $useCase            = $sheet->getCell('C' . $row)->getValue();
+            $executionDetail    = $sheet->getCell('D' . $row)->getValue();
+            $expectedResults    = $sheet->getCell('E' . $row)->getValue();
+            $inputData          = $sheet->getCell('F' . $row)->getValue();
+            $outputData         = $sheet->getCell('G' . $row)->getValue(); // Si existe la columna de Datos de salida
 
             // Log the extracted data
-            Log::info("Row $row data: ScenarioID: $scenarioID, Condition: $condition, UseCase: $useCase, ExecutionDetail: $executionDetail, ExpectedResults: $expectedResults, Locators: $locators, InputData: $inputData");
+            Log::info("Row $row data: ScenarioID: $scenarioID, Condition: $condition, UseCase: $useCase, ExecutionDetail: $executionDetail, ExpectedResults: $expectedResults, Locators: $locators, InputData: $inputData, OutputData: $outputData");
 
             $prompts[] = [
-                "scenarioID" => $scenarioID,
-                "condition" => $condition,
-                "useCase" => $useCase,
-                "executionDetail" => $executionDetail,
-                "expectedResults" => $expectedResults,
-                "locators" => $locators,
-                "inputData" => $inputData,
+                "scenarioID"        => $scenarioID,
+                "condition"         => $condition,
+                "useCase"           => $useCase,
+                "executionDetail"   => $executionDetail,
+                "expectedResults"   => $expectedResults,
+                "locators"          => $locators,
+                "inputData"         => $inputData,
+                "outputData"        => $outputData,
             ];
         }
 
@@ -88,29 +89,16 @@ class ExcelToDuskController extends Controller
 
         $client = new Client([
             'base_uri' => 'https://api.openai.com/',
-            'headers' => [
-                'Content-Type' => 'application/json',
+            'headers'  => [
+                'Content-Type'  => 'application/json',
                 'Authorization' => "Bearer {$yourApiKey}"
             ]
         ]);
 
-        $modelUsed = "gpt-4";
-
-        $responses = [];
-        $useFeedback = $request->boolean('use_feedback', false);
+        $modelUsed   = "gpt-4o";
+        $responses   = [];
         $projectName = $request->input('project_name');
-        $userId = Auth::id();
-
-        // Obtener retroalimentación de test_results si está habilitado
-        $feedbackData = [];
-        if ($useFeedback) {
-            // Obtener los últimos N registros de test_results para usar como contexto
-            $feedbackData = TestResult::where('user_id', $userId)
-                ->where('project_name', $projectName)
-                ->orderBy('created_at', 'desc')
-                ->take(5) // Puedes ajustar la cantidad de registros a obtener
-                ->get();
-        }
+        $userId      = Auth::id();
 
         foreach ($prompts as $prompt) {
             $aiResponse = null;
@@ -118,64 +106,81 @@ class ExcelToDuskController extends Controller
             // Construir mensajes para el modelo GPT
             $messages = [
                 [
-                    "role" => "system",
-                    "content" => "Eres un experimentado tester de software. Tu objetivo es generar funciones de prueba de Laravel Dusk basadas en la información de casos de prueba proporcionada."
+                    "role"    => "system",
+                    "content" => "Eres un asistente especializado en generar código de funciones para pruebas automatizadas utilizando Laravel Dusk, basado en los datos proporcionados por el usuario. Tu única salida será el código de la función Dusk correspondiente, sin interacción adicional ni comentarios.
+
+                    **Objetivos:**
+
+                    - Generar funciones de prueba en Laravel Dusk basadas en los datos ingresados.
+                    - Asegurarse de incluir `waitFor` y `#` en cada interacción con botones dentro del código.
+                    - Proporcionar exclusivamente el código de la función, sin explicaciones ni comentarios adicionales.
+
+                    **Instrucciones de Comportamiento:**
+
+                    - **Entrada:** Recibir los siguientes datos del usuario:
+                      - Scenario ID
+                      - Condición
+                      - Caso de uso
+                      - Detalle de ejecución
+                      - Resultados esperados
+                      - Localizadores
+                      - Datos de entrada
+                      - Datos de salida (opcional y rara vez incluido)
+
+                    - **Proceso:**
+                      - Interpretar los datos proporcionados para construir la función de prueba adecuada.
+                      - Utilizar los localizadores y datos de entrada para interactuar con elementos de la interfaz.
+                      - Incorporar `waitFor` y `#` en cada interacción con botones según las mejores prácticas de Laravel Dusk.
+                      - Cuando se deba esperar a que cargue una nueva página para continuar con el test, validar que exista el componente siguiente a utilizar con `assertSee` para evitar errores por no localizarlo.
+
+                    - **Salida:**
+                      - Proporcionar únicamente el código de la función Dusk resultante.
+                      - No incluir comentarios, explicaciones ni interactuar con el usuario más allá de proporcionar el código.
+
+                    **Restricciones y Consideraciones:**
+
+                    - **Evitar:**
+                      - Cualquier tipo de diálogo, consejo o comentario adicional.
+                      - Explicaciones sobre lo que se hizo o cómo se generó el código.
+                      - Proporcionar información que no esté directamente relacionada con el código de la función Dusk.
+                      - Responder a preguntas o temas que estén fuera de Dusk; se negará a responder temas fuera de Dusk.
+
+                    - **Obligatorio:**
+                      - Incluir `waitFor` y `#` en cada interacción con botones dentro del código.
+                      - Ceñirse exclusivamente a los datos proporcionados por el usuario para generar el código.
+                      - Mantener el enfoque en generar código funcional y preciso según las especificaciones dadas."
+                ],
+                [
+                    "role"    => "user",
+                    "content" => "Datos del caso de prueba:
+
+                    Scenario ID: {$prompt['scenarioID']}
+                    Condición: {$prompt['condition']}
+                    Caso de uso: {$prompt['useCase']}
+                    Detalle de ejecución: {$prompt['executionDetail']}
+                    Resultados esperados: {$prompt['expectedResults']}
+                    Localizadores: {$prompt['locators']}
+                    Datos de entrada: {$prompt['inputData']}
+                    Datos de salida: {$prompt['outputData']}
+                                    
+                    Genera el código Dusk necesario para este caso, siguiendo las mejores prácticas. No incluyas explicaciones adicionales."
                 ]
-            ];
-
-            // Si hay retroalimentación, agregarla al mensaje
-            if ($useFeedback && !$feedbackData->isEmpty()) {
-                $feedbackContent = "";
-                foreach ($feedbackData as $feedback) {
-                    $feedbackContent .= "Caso previo:\n";
-                    $feedbackContent .= "Scenario ID: {$feedback->scenario_id}\n";
-                    $feedbackContent .= "Condición: {$feedback->condition}\n";
-                    $feedbackContent .= "Detalle de ejecución: {$feedback->execution_detail}\n";
-                    $feedbackContent .= "Resultados esperados: {$feedback->expected_results}\n";
-                    $feedbackContent .= "Respuesta AI previa:\n{$feedback->ai_response}\n\n";
-                }
-
-                $messages[] = [
-                    "role" => "system",
-                    "content" => "Basándote en los siguientes casos previos y sus soluciones, genera el código para el nuevo caso."
-                ];
-
-                $messages[] = [
-                    "role" => "assistant",
-                    "content" => $feedbackContent
-                ];
-            }
-
-            // Agregar el nuevo caso a resolver
-            $userContent = "Nuevo caso:\n";
-            $userContent .= "Scenario ID: {$prompt['scenarioID']}\n";
-            $userContent .= "Condición: {$prompt['condition']}\n";
-            $userContent .= "Caso de uso: {$prompt['useCase']}\n";
-            $userContent .= "Detalle de ejecución: {$prompt['executionDetail']}\n";
-            $userContent .= "Resultados esperados: {$prompt['expectedResults']}\n";
-            $userContent .= "Localizadores: {$prompt['locators']}\n";
-            $userContent .= "Datos de entrada: {$prompt['inputData']}\n";
-            $userContent .= "\nGenera el código Dusk necesario para este caso, siguiendo las mejores prácticas y basándote en los casos previos si están disponibles. No incluyas explicaciones adicionales.";
-
-            $messages[] = [
-                "role" => "user",
-                "content" => $userContent
             ];
 
             // Realizar la llamada a la API de OpenAI
             try {
                 $response = $client->post('v1/chat/completions', [
                     'json' => [
-                        'model' => $modelUsed,
-                        'messages' => $messages,
-                        'max_tokens' => 1024,
+                        'model'       => $modelUsed,
+                        'messages'    => $messages,
+                        'max_tokens'  => 1024,
                         'temperature' => 0.1,
                     ]
                 ]);
 
                 $responseBody = json_decode($response->getBody(), true);
-                $aiResponse = isset($responseBody['choices'][0]['message']['content']) ? $responseBody['choices'][0]['message']['content'] : 'No response';
-                $responses[] = $aiResponse;
+                $aiResponse   = $responseBody['choices'][0]['message']['content'] ?? 'No response';
+                $responses[]  = $aiResponse;
             } catch (\Exception $e) {
                 Log::error("Error al llamar a la API de OpenAI: " . $e->getMessage());
                 $aiResponse = 'No response due to API error';
@@ -183,17 +188,18 @@ class ExcelToDuskController extends Controller
 
             // Guardar el resultado en test_results
             TestResult::create([
-                'scenario_id' => $prompt['scenarioID'],
-                'condition' => $prompt['condition'],
-                'use_case' => $prompt['useCase'],
-                'execution_detail' => $prompt['executionDetail'],
-                'expected_results' => $prompt['expectedResults'],
-                'locators' => $prompt['locators'],
-                'input_data' => $prompt['inputData'],
-                'ai_response' => $aiResponse,
-                'model_used' => $modelUsed,
-                'user_id' => $userId,
-                'project_name' => $projectName,
+                'scenario_id'       => $prompt['scenarioID'],
+                'condition'         => $prompt['condition'],
+                'use_case'          => $prompt['useCase'],
+                'execution_detail'  => $prompt['executionDetail'],
+                'expected_results'  => $prompt['expectedResults'],
+                'locators'          => $prompt['locators'],
+                'input_data'        => $prompt['inputData'],
+                'output_data'       => $prompt['outputData'],
+                'ai_response'       => $aiResponse,
+                'model_used'        => $modelUsed,
+                'user_id'           => $userId,
+                'project_name'      => $projectName,
             ]);
         }
 
@@ -203,7 +209,6 @@ class ExcelToDuskController extends Controller
             return redirect()->route('upload-excel')->with('success', 'Los resultados de las pruebas se han guardado correctamente.');
         }
     }
-
     private function parseRowsInput($rowsInput)
     {
         $rows = [];
