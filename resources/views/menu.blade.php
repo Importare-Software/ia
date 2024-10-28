@@ -29,7 +29,7 @@
                 Calificar y Corregir
             </a>
         </li>
-        @if(auth()->check() && auth()->user()->email === 'alexis@importare.mx')
+        @if(auth()->check() && in_array(auth()->user()->email, ['alexis@importare.mx', 'jvalle0514@gmail.com']))
         <li>
             <a href="{{ url('/chatbot/settings') }}" class="nav-link {{ request()->is('chatbot/settings') ? 'active' : 'link-dark' }}">
                 Configurar Chat
