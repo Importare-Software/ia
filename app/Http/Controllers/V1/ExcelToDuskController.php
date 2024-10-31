@@ -68,7 +68,7 @@ class ExcelToDuskController extends Controller
             $executionDetail    = $sheet->getCell('D' . $row)->getValue();
             $expectedResults    = $sheet->getCell('E' . $row)->getValue();
             $inputData          = $sheet->getCell('F' . $row)->getValue();
-            $outputData         = $sheet->getCell('G' . $row)->getValue(); 
+            $outputData         = $sheet->getCell('G' . $row)->getValue();
 
             Log::info("Row $row data: ScenarioID: $scenarioID, Condition: $condition, UseCase: $useCase, ExecutionDetail: $executionDetail, ExpectedResults: $expectedResults, Locators: $locators, InputData: $inputData, OutputData: $outputData");
 
@@ -160,6 +160,7 @@ class ExcelToDuskController extends Controller
                     Localizadores: {$prompt['locators']}
                     Datos de entrada: {$prompt['inputData']}
                     Datos de salida: {$prompt['outputData']}
+                    " . (!empty($promptExtra) ? "\nPrompt Extra: {$promptExtra}" : "") . "
                                     
                     Genera el código Dusk necesario para este caso, siguiendo las mejores prácticas. No incluyas explicaciones adicionales."
                 ]

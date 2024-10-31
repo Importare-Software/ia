@@ -44,11 +44,16 @@
                                 <label for="project_name" class="form-label">Nombre del proyecto:</label>
                                 <input type="text" class="form-control" id="project_name" name="project_name" required>
                             </div>
+                            <!-- Campo opcional para prompt extra -->
+                            <div class="mb-3">
+                                <label for="prompt_extra" class="form-label">Prompt Extra (Opcional):</label>
+                                <textarea class="form-control" id="prompt_extra" name="prompt_extra" rows="3" placeholder="Ingresa un prompt adicional si lo deseas."></textarea>
+                            </div>
                             <!-- Checkbox para utilizar retroalimentación -->
-                            <div class="mb-3 form-check">
+                            <!-- <div class="mb-3 form-check">
                                 <input type="checkbox" class="form-check-input" id="use_feedback" name="use_feedback" value="1">
                                 <label class="form-check-label" for="use_feedback">Utilizar retroalimentación de resultados anteriores</label>
-                            </div>
+                            </div> -->
                             <button type="submit" class="btn btn-success">Generar Pruebas</button>
                         </form>
                         @endif
