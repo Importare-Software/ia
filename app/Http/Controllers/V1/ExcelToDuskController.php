@@ -130,6 +130,7 @@ class ExcelToDuskController extends Controller
                       - Utilizar los localizadores y datos de entrada para interactuar con elementos de la interfaz.
                       - Incorporar `waitFor` y `#` en cada interacción con botones según las mejores prácticas de Laravel Dusk.
                       - Cuando se deba esperar a que cargue una nueva página para continuar con el test, validar que exista el componente siguiente a utilizar con `assertSee` para evitar errores por no localizarlo.
+                      - Cuando se deba esperar a que cargue una nueva página y sea necesario agregar datos, has uso de pause() antes de mandar la petición. 
 
                     - **Salida:**
                       - Proporcionar únicamente el código de la función Dusk resultante.

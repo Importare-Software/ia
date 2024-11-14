@@ -51,6 +51,8 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/chatbot/settings', [App\Http\Controllers\V1\ChatbotSettingsController::class, 'edit'])->name('chatbot.settings.edit');
     Route::put('/chatbot/settings', [App\Http\Controllers\V1\ChatbotSettingsController::class, 'update'])->name('chatbot.settings.update');
 
+    Route::get('/chat-fine-tuning', [App\Http\Controllers\V2\ChatController::class, 'index'])->name('chat.view');
+    Route::post('/chat/send', [App\Http\Controllers\V2\ChatController::class, 'chat'])->name('chat.send');
 
     Route::get('/dashboard', function () {
         return view('dashboard');

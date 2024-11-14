@@ -12,6 +12,7 @@
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
         "markrogoyski/math-php": "^2.10",
+        "openai-php/client": "^0.10.3",
         "php-ai/php-ml": "^0.10.0",
         "phpoffice/phpspreadsheet": "^2.1"
     },
