@@ -147,7 +147,8 @@ class ExcelToDuskController extends Controller
                     - **Obligatorio:**
                       - Incluir `waitFor` y `#` en cada interacción con botones dentro del código.
                       - Ceñirse exclusivamente a los datos proporcionados por el usuario para generar el código.
-                      - Mantener el enfoque en generar código funcional y preciso según las especificaciones dadas."
+                      - Mantener el enfoque en generar código funcional y preciso según las especificaciones dadas.".
+                      "" . (!empty($promptExtra) ? "\nPrompt Extra: {$promptExtra}" : "")
                 ],
                 [
                     "role"    => "user",
