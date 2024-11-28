@@ -42,6 +42,7 @@ class ExcelToDuskController extends Controller
             'sheetName'     => 'required|string',
             'rows'          => 'required|string',
             'project_name'  => 'required|string',
+            'prompt_extra'  => 'nullable|string',
         ]);
 
         $path = session('excelPath'); // Recupera la ruta del archivo de la sesión
@@ -98,6 +99,7 @@ class ExcelToDuskController extends Controller
         $responses   = [];
         $projectName = $request->input('project_name');
         $userId      = Auth::id();
+        $promptExtra = $request->input('prompt_extra');
 
         foreach ($prompts as $prompt) {
             $aiResponse = null;
@@ -105,13 +107,13 @@ class ExcelToDuskController extends Controller
             $messages = [
                 [
                     "role"    => "system",
-                    "content" => "Eres un asistente especializado en generar código de funciones para pruebas automatizadas utilizando Laravel Dusk, basado en los datos proporcionados por el usuario. Tu única salida será el código de la función Dusk correspondiente, sin interacción adicional ni comentarios.
+                    "content" => "Eres un asistente especializado en generar código de funciones para pruebas automatizadas utilizando Laravel Dusk, implementando el patrón Page Object basado en los datos proporcionados por el usuario. Define selectores y usa estos objetos en las funciones de prueba. Tu única salida será el código de la función Dusk correspondiente, sin interacción adicional ni comentarios.
 
                     **Objetivos:**
 
                     - Generar funciones de prueba en Laravel Dusk basadas en los datos ingresados.
                     - Asegurarse de incluir `waitFor` y `#` en cada interacción con botones dentro del código.
-                    - Proporcionar exclusivamente el código de la función, sin explicaciones ni comentarios adicionales.
+                    - Proporcionar exclusivamente el código de la función y los selectores de Page Object, sin explicaciones ni comentarios adicionales.
 
                     **Instrucciones de Comportamiento:**
 
@@ -131,10 +133,18 @@ class ExcelToDuskController extends Controller
                       - Incorporar `waitFor` y `#` en cada interacción con botones según las mejores prácticas de Laravel Dusk.
                       - Cuando se deba esperar a que cargue una nueva página para continuar con el test, validar que exista el componente siguiente a utilizar con `assertSee` para evitar errores por no localizarlo.
                       - Cuando se deba esperar a que cargue una nueva página y sea necesario agregar datos, has uso de pause() antes de mandar la petición. 
+                      - Separar claramente la definición de selectores de las funciones de prueba.
 
                     - **Salida:**
-                      - Proporcionar únicamente el código de la función Dusk resultante.
+                      - Proporcionar únicamente el código de la función Dusk resultante y los selectores de Page Object.
                       - No incluir comentarios, explicaciones ni interactuar con el usuario más allá de proporcionar el código.
+                      - Proporcionar los selectores en un array asociativo con un `return` al inicio, en el siguiente formato:
+                        ```php
+                        return [
+                            '@selectorName' => 'selectorValue',
+                            // Otros selectores...
+                        ];
+                        ```
 
                     **Restricciones y Consideraciones:**
 
@@ -148,7 +158,7 @@ class ExcelToDuskController extends Controller
                       - Incluir `waitFor` y `#` en cada interacción con botones dentro del código.
                       - Ceñirse exclusivamente a los datos proporcionados por el usuario para generar el código.
                       - Mantener el enfoque en generar código funcional y preciso según las especificaciones dadas.".
-                      "" . (!empty($promptExtra) ? "\nPrompt Extra: {$promptExtra}" : "")
+                      "" . (!empty($promptExtra) ? "\nEste prompt es obligatoria y de gran importancia: {$promptExtra}" : "")
                 ],
                 [
                     "role"    => "user",
@@ -161,19 +171,29 @@ class ExcelToDuskController extends Controller
                     Resultados esperados: {$prompt['expectedResults']}
                     Localizadores: {$prompt['locators']}
                     Datos de entrada: {$prompt['inputData']}
-                    Datos de salida: {$prompt['outputData']}
-                    " . (!empty($promptExtra) ? "\nPrompt Extra: {$promptExtra}" : "") . "
+                    Datos de salida: {$prompt['outputData']}" .
+                    "" . (!empty($promptExtra) ? "\nEste prompt es obligatoria y de gran importancia: {$promptExtra}" : "") . "
                                     
-                    Genera el código Dusk necesario para este caso, siguiendo las mejores prácticas. No incluyas explicaciones adicionales."
+                    Genera el código Dusk necesario para este caso, siguiendo las mejores prácticas. No incluyas explicaciones adicionales. Formatea la salida de la siguiente manera:
+                    
+                    ### Selectors:
+                    ```php
+                        // Array de selectores en el formato especificado
+                    ```
+
+                    ### Test Function:
+                    ```php
+                        // Código de la función de prueba Dusk utilizando Selectors
+                    ```"
                 ]
             ];
-
+            
             try {
                 $response = $client->post('v1/chat/completions', [
                     'json' => [
                         'model'       => $modelUsed,
                         'messages'    => $messages,
-                        'max_tokens'  => 1024,
+                        'max_tokens'  => 16384,
                         'temperature' => 0.1,
                     ]
                 ]);
