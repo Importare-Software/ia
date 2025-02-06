@@ -40,7 +40,7 @@
         <li class="nav-item">
             <span class="menu-section-title">Chat Embedding</span>
         </li>
-        @if(auth()->check() && in_array(auth()->user()->email, ['alexis@importare.mx', 'jvalle0514@gmail.com']))
+        @if(auth()->check() && in_array(auth()->user()->email, ['alexis@importare.mx']))
         <li>
             <a href="{{ url('/chatbot/settings') }}" class="nav-link {{ request()->is('chatbot/settings') ? 'active' : 'link-dark' }}">
                 Configurar Chat
