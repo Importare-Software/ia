@@ -1,3 +1,5 @@
+@extends('layouts.app')
+
 @section('content')
 <div class="d-flex">
     @include('menu')
